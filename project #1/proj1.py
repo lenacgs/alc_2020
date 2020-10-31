@@ -24,13 +24,13 @@ def load_tasks(lines):
     number_of_tasks = int(lines.readline())
 
     for line_number, line in enumerate(lines):
-        l = [int(x) for x in line[:-1].split(" ")]
+        l = [int(x) for x in line[:-1].split()]
         tasks.append(Task(line_number + 1, l[0], l[1], l[2], l[3], l[4:], []))
         if line_number + 1 == number_of_tasks:
             break
 
     for line_number, line in enumerate(lines):
-        d_line = [int(x) for x in line[:-1].split(" ")]
+        d_line = [int(x) for x in line[:-1].split()]
         for dependency_id in d_line[1:]:
             #tasks[line_number].dependencies.append(tasks[dependency_id - 1]) # To put the hole object in the dependencies list
             tasks[line_number].dependencies.append(dependency_id) # To put the task id in the dependencies list

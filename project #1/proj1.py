@@ -107,9 +107,13 @@ if __name__ == "__main__":
         for clause in enc.clauses:
             solver.add_clause(clause)
 
-
-    
-
+    #Constraints to deal with tasks' dependencies
+    for i in range(max_deadline):
+        for task in tasks:
+            for dep in task.dependencies:
+                for j in range(i):
+                    #the task in the current time can only execute if the dependency executed before
+                    solver.add_clause([-literals[j][dep - 1][-1], literals[i][task.task_number - 1][0]])
 
     # Soft clauses
     # Should to be altered to last fragment of every task

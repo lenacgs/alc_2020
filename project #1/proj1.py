@@ -107,6 +107,18 @@ if __name__ == "__main__":
         for clause in enc.clauses:
             solver.add_clause(clause)
 
+    #Constraints to ensure that each fragment is executed at most once
+    for task in tasks:
+        for fragment in range(task.number_fragments):
+            frag_literals = []
+            for i in range(max_deadline):
+                frag_literals.append(literals[i][task.task_number - 1][fragment])
+
+            enc = CardEnc.equals(lits=frag_literals, bound=1, encoding=EncType.pairwise)
+            for clause in enc.clauses:
+                solver.add_clause(clause)
+
+
     #Constraints to deal with tasks' dependencies
     for i in range(max_deadline):
         for task in tasks:
@@ -115,7 +127,6 @@ if __name__ == "__main__":
                 for j in range(i):
                     clause.append(literals[j][dep - 1][-1])
                 clause.append(-literals[i][task.task_number - 1][0])
-                #the task in the current time can only execute if the dependency executed before
                 solver.add_clause(clause)
 
     # Soft clauses

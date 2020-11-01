@@ -114,10 +114,10 @@ if __name__ == "__main__":
             for i in range(max_deadline):
                 frag_literals.append(literals[i][task.task_number - 1][fragment])
 
-            enc = CardEnc.equals(lits=frag_literals, bound=1, encoding=EncType.pairwise)
+            enc = CardEnc.atmost(lits=frag_literals, bound=1, encoding=EncType.pairwise)
             for clause in enc.clauses:
                 solver.add_clause(clause)
-
+            
 
     #Constraints to deal with tasks' dependencies
     for i in range(max_deadline):

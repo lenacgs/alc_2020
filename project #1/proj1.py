@@ -71,6 +71,16 @@ def create_literals_data_structure(tasks, max_deadline):
     return literals
 
 
+def max_id_in_clause(clause):
+    max_id = max(clause)
+    min_id = min(clause)
+
+    if abs(max_id) > abs(min_id):
+        return max_id
+    else:
+        return min_id
+
+
 if __name__ == "__main__":
     tasks = load_tasks(sys.stdin)
     
@@ -83,6 +93,10 @@ if __name__ == "__main__":
     total_number_fragments =  count_total_fragments(tasks)
 
     solver = RC2(WCNF())
+
+    for literal in literals:
+        print(literal)
+    print("")
     
     for task in tasks:
         # Constraints to ensure that tasks can only be executed after their release time
@@ -107,6 +121,7 @@ if __name__ == "__main__":
         for clause in enc.clauses:
             solver.add_clause(clause)
 
+    top_id = total_number_fragments * max_deadline
     #Constraints to ensure that each fragment is executed at most once
     for task in tasks:
         for fragment in range(task.number_fragments):
@@ -114,10 +129,16 @@ if __name__ == "__main__":
             for i in range(max_deadline):
                 frag_literals.append(literals[i][task.task_number - 1][fragment])
 
-            enc = CardEnc.atmost(lits=frag_literals, bound=1, encoding=EncType.pairwise)
+            # enc = CardEnc.atmost(lits=frag_literals, bound=1, encoding=EncType.pairwise)
+            #print(frag_literals, "Time:", task.fragments[fragment])
+            enc = CardEnc.atmost(lits=frag_literals, bound=task.fragments[fragment], top_id=top_id, encoding=EncType.seqcounter)
             for clause in enc.clauses:
+                max_id = max_id_in_clause(clause)
+                if max_id > top_id:
+                    top_id = max_id
                 solver.add_clause(clause)
-            
+    
+       
 
     #Constraints to deal with tasks' dependencies
     for i in range(max_deadline):
@@ -129,6 +150,43 @@ if __name__ == "__main__":
                 clause.append(-literals[i][task.task_number - 1][0])
                 solver.add_clause(clause)
 
+
+    for task in tasks:
+        for time in range(task.release_time, task.deadline_time):
+            for index, fragment_duration in enumerate(task.fragments):
+                # Constraints to ensure that fragments are fragments with size > 1 are executed sequentialy
+                # If the first fragment of task 1 (Tx00) has a duration = 2 then
+                # for every time where this fragment can be executed we need to make sure that if it
+                # is executed, in the next time step it will be executed as well. To achieve this we can
+                # use the cause (T000 and T100) => T200 <=> If the fragment is executed at time 1 (T100) then
+                # it must be executed at time 2 (T200) as well
+                if time + (fragment_duration - 1) < max_deadline and fragment_duration > 1:
+                    # print("Time", time, "Task", task.task_number, "Fragment", index, "Duration", fragment_duration)
+                    clause = []
+                    if time > 0:
+                        clause.append(literals[time - 1][task.task_number - 1][index])
+                    clause.append(-literals[time][task.task_number - 1][index])
+                    for time_offset in range(1, fragment_duration):
+                        clause.append(literals[time + time_offset][task.task_number - 1][index])
+                        solver.add_clause(clause)
+                        clause.pop()
+                elif fragment_duration > 1:
+                    # This prevents a fragment that excedes the max_deadline from being executed
+                    # Eg: If max_deadline = 9 then a fragment that takes 2 time units to complete can not be executed at time 8
+                    # print("Time", time, "Task", task.task_number, "Fragment", index, "Duration", fragment_duration)
+                    solver.add_clause([-literals[time][task.task_number - 1][index]])
+                
+
+                # Constraints to ensure that fragments are executed in order
+                # Eg: T301 => (T200 or T100 or T000) <=> (-T301 or T200 or T100 or T000)
+                if index != 0: # First task does not need previous tasks to be executed before
+                    # print("Time", time, "Task", task.task_number, "Fragment", index, "Duration", fragment_duration)
+                    c = [-literals[time][task.task_number - 1][index]]
+                    for previous_time in range(task.release_time, time):
+                        c.append(literals[previous_time][task.task_number - 1][index - 1])
+                    solver.add_clause(c)
+
+
     # Soft clauses
     # Should to be altered to last fragment of every task
     for i in range(max_deadline):
@@ -137,6 +195,7 @@ if __name__ == "__main__":
                 solver.add_clause([literals[i][t.task_number - 1][item]], weight=1)
         
     # Print the output
+    # Has to be altered to print only once fragments that take more than 1 time step
     solution = solver.compute()
     print("Model:", solution, "\n")
         

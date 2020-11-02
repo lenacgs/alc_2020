@@ -117,7 +117,7 @@ if __name__ == "__main__":
             enc = CardEnc.atmost(lits=frag_literals, bound=1, encoding=EncType.pairwise)
             for clause in enc.clauses:
                 solver.add_clause(clause)
-            
+
 
     #Constraints to deal with tasks' dependencies
     for i in range(max_deadline):

@@ -94,9 +94,9 @@ if __name__ == "__main__":
 
     solver = RC2(WCNF())
 
-    for literal in literals:
-        print(literal)
-    print("")
+    #for literal in literals:
+    #    print(literal)
+    #print("")
     
     for task in tasks:
         # Constraints to ensure that tasks can only be executed after their release time
@@ -206,26 +206,26 @@ if __name__ == "__main__":
     # Print the output
     # Has to be altered to print only once fragments that take more than 1 time step
     solution = solver.compute()
-    print("Model:", solution, "\n")
-        
+    # print("Model:", solution, "\n")
+       
     output = []
     for i in range(len(tasks)):
         output.append([])
 
     task_offset = 0
-    for time in range(max_deadline):
-        for task in tasks:
-            for fragment in range(task.number_fragments):
+    for task in tasks:
+        for fragment in range(task.number_fragments):
+            for time in range(max_deadline):
                 if solution[time * total_number_fragments + task_offset] > 0:
                     output[task.task_number - 1].append(str(time))
-                task_offset += 1
-        task_offset = 0
-    
+                    break
+            task_offset += 1
+
     print(len(output) - output.count([]))
     for index, task_times in enumerate(output):
         if not task_times:
             continue
         print(index + 1, " ".join(task_times))
-
+    
     #print("Cost:", solver.cost)
             

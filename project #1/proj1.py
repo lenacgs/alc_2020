@@ -184,6 +184,17 @@ if __name__ == "__main__":
                         c.append(literals[previous_time][task.task_number - 1][index - 1])
                     solver.add_clause(c)
 
+    #Constraint to ensure that tasks are executed atomically (all fragments of the task should be executed, or none are)
+    for task in tasks:
+        for i in range(task.release_time, task.deadline_time):
+            #this task can only execute its first fragment if we know that the last fragment can also be executed
+            clause = []
+            for j in range(i, task.deadline_time):
+                clause.append(literals[j][task.task_number - 1][-1])
+            clause.append(-literals[i][task.task_number - 1][0])
+            solver.add_clause(clause)
+
+
 
     # Soft clauses
     # Should to be altered to last fragment of every task

@@ -94,9 +94,9 @@ if __name__ == "__main__":
 
     solver = RC2(WCNF())
 
-    #for literal in literals:
-    #    print(literal)
-    #print("")
+    for literal in literals:
+        print(literal)
+    print("")
     
     for task in tasks:
         # Constraints to ensure that tasks can only be executed after their release time
@@ -109,7 +109,7 @@ if __name__ == "__main__":
             for fragment in range(task.number_fragments):
                 solver.add_clause([-literals[time][task.task_number - 1][fragment]])
 
-
+    top_id = total_number_fragments * max_deadline
     # Constraints to ensure that only one fragment is executed at a time
     for i in range(max_deadline):
         time_literals = []
@@ -117,11 +117,14 @@ if __name__ == "__main__":
             time_literals.extend(literals[i][task.task_number - 1])
 
         # Use EncType.bitwise for performance optimization
-        enc = CardEnc.atmost(lits=time_literals, bound=1, encoding=EncType.pairwise)
+        enc = CardEnc.atmost(lits=time_literals, bound=1, top_id=top_id, encoding=EncType.seqcounter)
         for clause in enc.clauses:
+            max_id = max_id_in_clause(clause)
+            if max_id > top_id:
+                top_id = max_id
             solver.add_clause(clause)
 
-    top_id = total_number_fragments * max_deadline
+    
     #Constraints to ensure that each fragment is executed at most once
     for task in tasks:
         for fragment in range(task.number_fragments):
@@ -194,19 +197,15 @@ if __name__ == "__main__":
             clause.append(-literals[i][task.task_number - 1][0])
             solver.add_clause(clause)
 
-
-
     # Soft clauses
-    # Should to be altered to last fragment of every task
-    for i in range(max_deadline):
-        for t in tasks:
-            for item in range(t.number_fragments):
-                solver.add_clause([literals[i][t.task_number - 1][item]], weight=1)
-        
+    for task in tasks:
+        for time in range(task.release_time + sum(task.fragments[:-1]), task.deadline_time):
+            solver.add_clause([literals[time][task.task_number - 1][task.number_fragments - 1]], weight=1)
+
     # Print the output
     # Has to be altered to print only once fragments that take more than 1 time step
     solution = solver.compute()
-    # print("Model:", solution, "\n")
+    print("Model:", solution, "\n")
        
     output = []
     for i in range(len(tasks)):

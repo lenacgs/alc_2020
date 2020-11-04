@@ -117,7 +117,7 @@ if __name__ == "__main__":
             time_literals.extend(literals[i][task.task_number - 1])
 
         # Use EncType.bitwise for performance optimization
-        enc = CardEnc.atmost(lits=time_literals, bound=1, top_id=top_id, encoding=EncType.seqcounter)
+        enc = CardEnc.atmost(lits=time_literals, bound=1, top_id=top_id, encoding=EncType.pairwise)
         for clause in enc.clauses:
             max_id = max_id_in_clause(clause)
             if max_id > top_id:
@@ -126,20 +126,20 @@ if __name__ == "__main__":
 
     
     #Constraints to ensure that each fragment is executed at most once
-    for task in tasks:
-        for fragment in range(task.number_fragments):
-            frag_literals = []
-            for i in range(max_deadline):
-                frag_literals.append(literals[i][task.task_number - 1][fragment])
-
-            # enc = CardEnc.atmost(lits=frag_literals, bound=1, encoding=EncType.pairwise)
-            #print(frag_literals, "Time:", task.fragments[fragment])
-            enc = CardEnc.atmost(lits=frag_literals, bound=task.fragments[fragment], top_id=top_id, encoding=EncType.seqcounter)
-            for clause in enc.clauses:
-                max_id = max_id_in_clause(clause)
-                if max_id > top_id:
-                    top_id = max_id
-                solver.add_clause(clause)
+    # for task in tasks:
+    #     for fragment in range(task.number_fragments):
+    #         frag_literals = []
+    #         for i in range(max_deadline):
+    #             frag_literals.append(literals[i][task.task_number - 1][fragment])
+    #
+    #         # enc = CardEnc.atmost(lits=frag_literals, bound=1, encoding=EncType.pairwise)
+    #         #print(frag_literals, "Time:", task.fragments[fragment])
+    #         enc = CardEnc.atmost(lits=frag_literals, bound=task.fragments[fragment], top_id=top_id, encoding=EncType.pairwise)
+    #         for clause in enc.clauses:
+    #             max_id = max_id_in_clause(clause)
+    #             if max_id > top_id:
+    #                 top_id = max_id
+    #             solver.add_clause(clause)
 
     #Constraints to deal with tasks' dependencies
     for i in range(max_deadline):
@@ -198,9 +198,20 @@ if __name__ == "__main__":
             solver.add_clause(clause)
 
     # Soft clauses
+
+    task_finished = []
+
     for task in tasks:
-        for time in range(task.release_time + sum(task.fragments[:-1]), task.deadline_time):
-            solver.add_clause([literals[time][task.task_number - 1][task.number_fragments - 1]], weight=1)
+        clause = []
+        for time in range(task.release_time, task.deadline_time):
+            clause.append(literals[time][task.task_number - 1][task.number_fragments - 1])
+        clause.append(-task_finished[task.task_number - 1])
+        solver.add_clause(clause, weight=1)
+
+    #soft clause antiga
+    # for task in tasks:
+    #     for time in range(task.release_time + sum(task.fragments[:-1]), task.deadline_time):
+    #         solver.add_clause([literals[time][task.task_number - 1][task.number_fragments - 1]], weight=1)
 
     # Print the output
     # Has to be altered to print only once fragments that take more than 1 time step

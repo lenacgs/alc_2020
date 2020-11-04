@@ -94,10 +94,10 @@ if __name__ == "__main__":
 
     solver = RC2(WCNF())
 
-    for literal in literals:
-        print(literal)
-    print("")
-    
+    # for literal in literals:
+    #     print(literal)
+    # print("")
+
     for task in tasks:
         # Constraints to ensure that tasks can only be executed after their release time
         for time in range(task.release_time):
@@ -205,7 +205,7 @@ if __name__ == "__main__":
     # Print the output
     # Has to be altered to print only once fragments that take more than 1 time step
     solution = solver.compute()
-    print("Model:", solution, "\n")
+    #print("Model:", solution, "\n")
        
     output = []
     for i in range(len(tasks)):

@@ -151,6 +151,17 @@ if __name__ == "__main__":
                 clause.append(-literals[i][task.task_number - 1][0])
                 solver.add_clause(clause)
 
+    # Constraint to ensure that fragments that have duration > 1 are executed atomically
+    # for task in tasks:
+    #     for fragment in range(task.number_fragments):
+    #         for time in range(task.release_time, task.deadline_time):
+    #             if task.fragments[fragment] > 1 and time + tasks[task.task_number - 1].fragments[fragment] <= task.deadline_time:
+    #                 for fragment_time in range(task.fragments[fragment] - 1):
+    #                     clause = []
+    #                     solver.add_clause([-literals[time][task.task_number - 1][fragment], literals[time+fragment_time+1][task.task_number - 1][fragment], literals[time-1]])
+
+
+
 
     for task in tasks:
         for time in range(task.release_time, task.deadline_time):
@@ -176,7 +187,7 @@ if __name__ == "__main__":
                     # Eg: If max_deadline = 9 then a fragment that takes 2 time units to complete can not be executed at time 8
                     # print("Time", time, "Task", task.task_number, "Fragment", index, "Duration", fragment_duration)
                     solver.add_clause([-literals[time][task.task_number - 1][index]])
-                
+
 
                 # Constraints to ensure that fragments are executed in order
                 # Eg: T301 => (T200 or T100 or T000) <=> (-T301 or T200 or T100 or T000)
@@ -199,7 +210,7 @@ if __name__ == "__main__":
 
     # Soft clauses
 
-    task_finished = []
+    task_finished = [0 for task in tasks]
 
     for task in tasks:
         clause = []

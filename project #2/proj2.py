@@ -1,0 +1,120 @@
+import time
+
+from z3 import Optimize, Int, Or, And, Distinct, Sum, Implies
+
+
+class Task:
+
+    def __init__(self, task_number, release_time, processing_time, deadline_time, number_fragments, fragments,
+                 dependencies):
+        self.task_number = task_number
+        self.release_time = release_time
+        self.processing_time = processing_time
+        self.deadline_time = deadline_time
+        self.number_fragments = number_fragments
+        self.fragments = fragments
+        self.dependencies = dependencies
+
+    def __str__(self):
+        return "TN = {0}, RT = {1}, PT = {2}, DT = {3}, NF = {4}, FPT = {5}, D = {6}".format(self.task_number,
+                                                                                             self.release_time,
+                                                                                             self.processing_time,
+                                                                                             self.deadline_time,
+                                                                                             self.number_fragments,
+                                                                                             self.fragments,
+                                                                                             self.dependencies)
+
+
+def load_tasks():
+    tasks = []
+    n = input()
+    number_of_tasks = int(n)
+
+    for i in range(number_of_tasks):
+        l = list(map(int, input().split(' ')))
+        tasks.append(Task(i + 1, l[0], l[1], l[2], l[3], l[4:], []))
+
+    for i in range(number_of_tasks):
+        l = list(map(int, input().split(' ')))
+        tasks[i].dependencies.extend(l[1:])
+
+    return tasks
+
+
+def create_variables(tasks):
+    variables = []
+
+    for t in tasks:
+        variables.append([])
+        for j in range(t.number_fragments):
+            variables[t.task_number - 1] += [Int(f't_{t.task_number}_{j}')]
+
+    return variables
+
+
+if __name__ == "__main__":
+    tasks = load_tasks()
+
+    variables = create_variables(tasks)
+    tasks_finished = [Int(f't_{i + 1}') for i in range(len(tasks))]
+
+    solver = Optimize()
+
+    # tasks_finished is either 0 or 1
+    for t in tasks_finished:
+        solver.add(Or(t == 0, t == 1))
+
+    for t_idx, task_frags in enumerate(variables):
+        task_literals = []
+
+        # Ensure that tasks can only be executed after their release time or before the deadline
+        for f_idx, fragment_var in enumerate(task_frags):
+            task_literals += [fragment_var >= tasks[t_idx].release_time]
+            task_literals += [fragment_var <= tasks[t_idx].deadline_time - tasks[t_idx].fragments[f_idx]]
+
+        # Ensure that fragments are executed in order
+        for f in range(len(task_frags) - 1):
+            task_literals += [task_frags[f + 1] >= task_frags[f] + tasks[t_idx].fragments[f]]
+
+        # Ensure that only one fragment is executed at a time
+        for i in range(len(variables[t_idx])):
+            for t in range(t_idx + 1, len(tasks)):
+                for f in range(len(variables[t])):
+                    task_literals += [Or(variables[t_idx][i] >= variables[t][f] + tasks[t].fragments[f],
+                                         variables[t][f] >= variables[t_idx][i] + tasks[t_idx].fragments[i],
+                                         tasks_finished[t_idx] + tasks_finished[t] < 2)]
+
+        # Ensure that a task is only executed after its dependencies
+        for dependency in tasks[t_idx].dependencies:
+            task_literals += [
+                Or(variables[t_idx][0] >= variables[dependency - 1][-1] + tasks[dependency - 1].fragments[-1],
+                   tasks_finished[t_idx] == 0)]
+            task_literals += [Or(tasks_finished[dependency - 1] == 1, tasks_finished[t_idx] == 0)]
+
+        solver.add(And(task_literals))
+
+    for t in range(len(tasks_finished)):
+        solver.add(Implies(tasks_finished[t] == 1, variables[t][-1] <= tasks[t].deadline_time - tasks[t].fragments[-1]))
+
+    # Maximize the number of finished tasks
+    solver.maximize(Sum(tasks_finished))
+
+    start = time.time()
+    solver.check()
+    model = solver.model()
+    end = time.time()
+
+    # Print the output
+    output = []
+    for i in range(len(tasks)):
+        times = []
+
+        if model[Int(f't_{i + 1}')] == 1:
+            times += [str(i + 1)]
+            for f in range(len(tasks[i].fragments)):
+                times += [str(model[Int(f't_{i + 1}_{f}')])]
+            output += [times]
+
+    print(len(output))
+    for line in output:
+        print(" ".join(line))

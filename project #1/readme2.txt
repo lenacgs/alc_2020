@@ -1,12 +1,14 @@
-Project #1 - Single Machine Scheduling
+Project #2 - Single Machine Scheduling
 
 André Lopes 98675
 Madalena Santos 97085
 
 Our program uses the Z3 theorem prover, which is a cross-platform satisfiability modulo theories solver. Z3 supports arithmetic, fixed-size bit-vectors, extensional arrays, datatypes, uninterpreted functions and quantifiers. 
 
-To execute it, use:
+To install Z3, run the command:
+$pip3 install z3-solver
 
+To execute the project use:
 $./proj2 < inputfile > outputfile
 
 Python3 should be located under the directory /usr/bin

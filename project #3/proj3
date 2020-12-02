@@ -1,0 +1,117 @@
+#!/usr/bin/python3
+
+import time
+import subprocess
+
+class Task:
+
+    def __init__(self, task_number, release_time, processing_time, deadline_time, number_fragments, fragments,
+                 dependencies):
+        self.task_number = task_number
+        self.release_time = release_time
+        self.processing_time = processing_time
+        self.deadline_time = deadline_time
+        self.number_fragments = number_fragments
+        self.fragments = fragments
+        self.dependencies = dependencies
+
+    def __str__(self):
+        return "TN = {0}, RT = {1}, PT = {2}, DT = {3}, NF = {4}, FPT = {5}, D = {6}".format(self.task_number,
+                                                                                             self.release_time,
+                                                                                             self.processing_time,
+                                                                                             self.deadline_time,
+                                                                                             self.number_fragments,
+                                                                                             self.fragments,
+                                                                                             self.dependencies)
+
+
+def load_tasks():
+    tasks = []
+    n = input()
+    number_of_tasks = int(n)
+
+    for i in range(number_of_tasks):
+        l = list(map(int, input().split(' ')))
+        tasks.append(Task(i + 1, l[0], l[1], l[2], l[3], l[4:], []))
+
+    for i in range(number_of_tasks):
+        l = list(map(int, input().split(' ')))
+        tasks[i].dependencies.extend(l[1:])
+
+    return tasks
+
+
+def load_data(tasks):
+    data = ""
+    # ------------------------------------------------------------------------------
+    number_of_tasks = len(tasks)
+    data += f'number_tasks = {number_of_tasks};'
+    # ------------------------------------------------------------------------------
+    max_number_fragments = 0
+    for task in tasks:
+        if len(task.fragments) > max_number_fragments:
+            max_number_fragments = len(task.fragments)
+    data += f'max_number_fragments = {max_number_fragments};'
+    # ------------------------------------------------------------------------------
+    max_number_dependencies = 0
+    for task in tasks:
+        if len(task.dependencies) > max_number_dependencies:
+            max_number_dependencies = len(task.dependencies)
+    data += f'max_number_dependencies = {max_number_dependencies};'
+    # ------------------------------------------------------------------------------
+    max_deadline = 0
+    for task in tasks:
+        if task.deadline_time > max_deadline:
+            max_deadline = task.deadline_time
+    data += f'max_deadline = {max_deadline};'
+    # ------------------------------------------------------------------------------
+    tasks_output = '[|'
+    for task in tasks:
+        tasks_output += f'{task.release_time}, {task.processing_time}, {task.deadline_time}, {len(task.fragments)}, {len(task.dependencies)}|'
+    tasks_output += ']'
+    data += f'tasks = {tasks_output};'
+    # ------------------------------------------------------------------------------
+    fragments = '[|'
+    for task in tasks:
+        f = [0] * max_number_fragments
+        f[:len(task.fragments)] = task.fragments
+        l = ", ".join(map(str, f))
+        fragments += f'{l}|'
+    fragments += ']'
+    data += f'fragments = {fragments};'
+    # ------------------------------------------------------------------------------
+    if max_number_dependencies > 0:
+        dependencies = '[|'
+        for task in tasks:
+            f = [0] * max_number_dependencies
+            f[:len(task.dependencies)] = task.dependencies
+            l = ", ".join(map(str, f))
+            dependencies += f'{l}|'
+        dependencies += ']'
+        data += f'dependencies = {dependencies};'
+    else:
+        pass #BUG WHEN THERE ARE NO DEPENDENCIES
+
+    return data
+
+if __name__ == "__main__":
+    tasks = load_tasks()
+
+    data = load_data(tasks)
+
+    ps = subprocess.Popen(("minizinc", "proj3.mzn", "-"),
+                        stdin = subprocess.PIPE,
+                        stdout = subprocess.PIPE,
+                        encoding = 'utf-8')
+
+    output, _ = ps.communicate(data)
+    output = output.split('\n')
+
+    number_of_tasks_finished = int(output[0])
+    tasks_finished = [e == "true" for e in output[1][1:-1].split(', ')]
+
+    print(number_of_tasks_finished)
+    for i in range(2, len(tasks_finished) + 2):
+        if tasks_finished[i - 2] == True:
+            fragments = output[i][1:-1].split(', ')
+            print(i - 1, ' '.join(fragments))

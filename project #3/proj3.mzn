@@ -1,4 +1,4 @@
-include "proj3.dzn";
+%include "data.dzn";
 % --------------- model parameters ---------------
 
 int: number_tasks;
@@ -37,32 +37,55 @@ constraint
     scheduled_fragments[task, 1] >= release_time(task)
   );
 
+
 % each task can only execute before its deadline
 constraint
   forall (task in 1..number_tasks) (
     scheduled_fragments[task, number_fragments(task)] + fragments[task, number_fragments(task)] <= deadline(task)
   );
-  
+
+
 % ensure that fragments do not overlap
 constraint
-  forall (task1 in 1..number_tasks, fragment1 in 1..number_fragments(task1)) (
-    forall (task2 in 1..number_tasks, fragment2 in 1..number_fragments(task2)) (
-      (task1 == task2 /\ fragment1 == fragment2) \/
+  forall (task1 in 1..number_tasks - 1, fragment1 in 1..number_fragments(task1)) (
+    forall (task2 in task1 + 1..number_tasks, fragment2 in 1..number_fragments(task2)) (
       scheduled_fragments[task1, fragment1] + fragments[task1, fragment1] <= scheduled_fragments[task2, fragment2] \/
-      scheduled_fragments[task2, fragment2] + fragments[task2, fragment2] <= scheduled_fragments[task1, fragment1]
+      scheduled_fragments[task2, fragment2] + fragments[task2, fragment2] <= scheduled_fragments[task1, fragment1] \/
+      task_finished[task1] == false \/ task_finished[task2] == false
     )
   );
-  
-% if the last fragment executed, then the task has finished
+
+
+% ensure that fragments are executed in order
 constraint
-  forall(task in 1..number_tasks) (
-    scheduled_fragments[task, number_fragments(task)] != 0 -> task_finished[task] == true
+  forall (task in 1..number_tasks, fragment in 1..number_fragments(task) - 1) (
+    scheduled_fragments[task, fragment + 1] >= scheduled_fragments[task, fragment] + fragments[task, fragment]
   );
+  
+  
+% ensure that a task is only executed after its dependencies
+constraint
+  forall (task in 1..number_tasks, dependency in 1..number_dependencies(task)) (
+    (scheduled_fragments[task, 1] >= scheduled_fragments[dependencies[task, dependency], number_fragments(dependencies[task, dependency])] + 
+    fragments[dependencies[task, dependency], number_fragments(dependencies[task, dependency])] \/
+    task_finished[task] == false) /\ 
+    (task_finished[task] == false \/ task_finished[dependencies[task, dependency]] == true)
+  );
+ 
+
+% if the last fragment executed, then the task has finished - Think this condition is not necessary... Not sure tho
+%constraint
+%  forall(task in 1..number_tasks) (
+%    task_finished[task] == true -> scheduled_fragments[task, number_fragments(task)] != 0
+%  );
+
 
 solve maximize sum(task_finished);
 
 
-
-output [show(sum(task_finished)), "\n"] ++
-       [show(if task_finished[task] then show(scheduled_fragments[task, frag])
-             else "" endif) | task in 1..number_tasks, frag in 1..number_fragments(task)]
+output  [show(sum(task_finished)) ++ "\n"] ++
+        [show(task_finished) ++ "\n"] ++
+        [show(scheduled_fragments[task,..number_fragments(task)]) ++ "\n" | task in 1..number_tasks]
+%       [show(if task_finished[task] then show(task) ++ show(scheduled_fragments[task,..])
+%             else "" endif) | task in 1..number_tasks] ++
+%       [show(task_finished[..])]

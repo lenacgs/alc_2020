@@ -33,26 +33,15 @@ function int: duration(int: task_id) = tasks[task_id, 2];
 
 % each task's starting time can only happen after its release time
 constraint
-  forall (task in 1..number_tasks) (
-    scheduled_fragments[task, 1] >= release_time(task)
+  forall (task in 1..number_tasks, fragment in 1..number_fragments(task)) (
+    scheduled_fragments[task, fragment] >= release_time(task)
   );
 
 
 % each task can only execute before its deadline
 constraint
-  forall (task in 1..number_tasks) (
-    scheduled_fragments[task, number_fragments(task)] + fragments[task, number_fragments(task)] <= deadline(task)
-  );
-
-
-% ensure that fragments do not overlap
-constraint
-  forall (task1 in 1..number_tasks - 1, fragment1 in 1..number_fragments(task1)) (
-    forall (task2 in task1 + 1..number_tasks, fragment2 in 1..number_fragments(task2)) (
-      scheduled_fragments[task1, fragment1] + fragments[task1, fragment1] <= scheduled_fragments[task2, fragment2] \/
-      scheduled_fragments[task2, fragment2] + fragments[task2, fragment2] <= scheduled_fragments[task1, fragment1] \/
-      task_finished[task1] == false \/ task_finished[task2] == false
-    )
+  forall (task in 1..number_tasks, fragment in 1..number_fragments(task)) (
+    scheduled_fragments[task, fragment] <= deadline(task) - fragments[task, number_fragments(task)]
   );
 
 
@@ -60,6 +49,17 @@ constraint
 constraint
   forall (task in 1..number_tasks, fragment in 1..number_fragments(task) - 1) (
     scheduled_fragments[task, fragment + 1] >= scheduled_fragments[task, fragment] + fragments[task, fragment]
+  );
+  
+
+% ensure that fragments do not overlap
+constraint
+  forall (task1 in 1..number_tasks - 1, fragment1 in 1..number_fragments(task1)) (
+    forall (task2 in task1 + 1..number_tasks, fragment2 in 1..number_fragments(task2)) (
+      scheduled_fragments[task1, fragment1] >= scheduled_fragments[task2, fragment2] + fragments[task2, fragment2] \/
+      scheduled_fragments[task2, fragment2] >= scheduled_fragments[task1, fragment1] + fragments[task1, fragment1] \/
+      task_finished[task1] + task_finished[task2] < 2
+    )
   );
   
   
@@ -76,7 +76,7 @@ constraint
 % if the last fragment executed, then the task has finished - Think this condition is not necessary... Not sure tho
 %constraint
 %  forall(task in 1..number_tasks) (
-%    task_finished[task] == true -> scheduled_fragments[task, number_fragments(task)] != 0
+%    task_finished[task] == true -> scheduled_fragments[task, number_fragments(task)] <= deadline(task) - fragments[task, number_fragments(task)]
 %  );
 
 
@@ -85,7 +85,8 @@ solve maximize sum(task_finished);
 
 output  [show(sum(task_finished)) ++ "\n"] ++
         [show(task_finished) ++ "\n"] ++
-        [show(scheduled_fragments[task,..number_fragments(task)]) ++ "\n" | task in 1..number_tasks]
+        [show(scheduled_fragments[task,..number_fragments(task)]) ++ "\n" | task in 1..number_tasks] ++
+        [show(t) ++ show(d) | t in 1..number_tasks, d in 1..1]
 %       [show(if task_finished[task] then show(task) ++ show(scheduled_fragments[task,..])
 %             else "" endif) | task in 1..number_tasks] ++
 %       [show(task_finished[..])]

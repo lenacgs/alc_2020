@@ -53,7 +53,7 @@ def load_data(tasks):
             max_number_fragments = len(task.fragments)
     data += f'max_number_fragments = {max_number_fragments};'
     # ------------------------------------------------------------------------------
-    max_number_dependencies = 0
+    max_number_dependencies = 1
     for task in tasks:
         if len(task.dependencies) > max_number_dependencies:
             max_number_dependencies = len(task.dependencies)
@@ -90,7 +90,12 @@ def load_data(tasks):
         dependencies += ']'
         data += f'dependencies = {dependencies};'
     else:
-        pass #BUG WHEN THERE ARE NO DEPENDENCIES
+        dependencies = '[|'
+        for task in tasks:
+            f = [0]
+            dependencies += f'{", ".join(map(str, f))}|'
+        dependencies += ']'
+        data += f'dependencies = {dependencies};'
 
     return data
 
@@ -98,13 +103,18 @@ if __name__ == "__main__":
     tasks = load_tasks()
 
     data = load_data(tasks)
-
+    
+    start = time.time()
+    
     ps = subprocess.Popen(("minizinc", "proj3.mzn", "-"),
                         stdin = subprocess.PIPE,
                         stdout = subprocess.PIPE,
                         encoding = 'utf-8')
 
     output, _ = ps.communicate(data)
+    
+    end = time.time()
+    
     output = output.split('\n')
 
     number_of_tasks_finished = int(output[0])
@@ -115,3 +125,5 @@ if __name__ == "__main__":
         if tasks_finished[i - 2] == True:
             fragments = output[i][1:-1].split(', ')
             print(i - 1, ' '.join(fragments))
+
+    print(f'Execution time: {end - start}')
